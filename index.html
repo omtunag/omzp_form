@@ -1,65 +1,26 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>OMZP投稿フォーム</title>
-  <style>
-    body{font-family:sans-serif;margin:1.5rem;max-width:480px}
-    label{display:block;margin-top:1rem}
-    button{margin-top:1.5rem;padding:.6rem 1.2rem}
-  </style>
-</head>
-<body>
-  <h1>OMZP投稿フォーム</h1>
+<script>
+const endpoint = 'https://script.google.com/macros/s/AKfycbx8NJ0JHRjsHy_NTXo4vUEzEY7qecqElKg7yZ8I9SuPSb5tXaIcKmZqEZiz8VzsnyXE/exec';
 
-  <form id="omzp-form">
-    <label>商品名：<br><input name="product" required></label>
-    <label>コメント：<br><textarea name="comment" rows="4"></textarea></label>
+document.getElementById('omzp-form').addEventListener('submit', async e=>{
+  e.preventDefault();
 
-    <!-- 位置情報（自動セットなので hidden） -->
-    <input type="hidden" name="lat">
-    <input type="hidden" name="lng">
+  // フォーム値を application/x-www-form-urlencoded 形式へ
+  const body = new URLSearchParams(new FormData(e.target)).toString();
 
-    <button type="submit">送信</button>
-  </form>
-
-  <script>
-    // ===== Apps Script の URL を貼り付け =====
-    const endpoint = 'https://script.google.com/macros/s/AKfycbx89qBET_uBmsUVXSPlsDmvGtBOn4mvfGBArScXdgIoKrIZmxNpkOZH8g-qkwRSqoOK/exec';
-
-    // ---------- 位置情報を取得して hidden 欄へ ----------
-    window.addEventListener('load', () => {
-      if (!navigator.geolocation) return; // 対応していないブラウザ
-      navigator.geolocation.getCurrentPosition(pos => {
-        document.querySelector('input[name="lat"]').value = pos.coords.latitude;
-        document.querySelector('input[name="lng"]').value = pos.coords.longitude;
-      }, err => {
-        console.warn('位置情報取得失敗:', err.message);
-      }, { enableHighAccuracy: true, timeout: 10000 });
+  try{
+    await fetch(endpoint, {
+      method : 'POST',
+      mode   : 'no-cors',                       // ← CORS チェックを無視して送信
+      headers: { 'Content-Type':'application/x-www-form-urlencoded' },
+      body
     });
 
-    // ---------- フォーム送信 ----------
-    document.getElementById('omzp-form').addEventListener('submit', async e => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-
-      try {
-        const res  = await fetch(endpoint, { method: 'POST', body: fd });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const json = await res.json();
-
-        if (json.result === 'ok') {
-          alert('送信に成功しました！');
-          e.target.reset();
-        } else {
-          throw new Error('サーバーからエラー応答');
-        }
-      } catch (err) {
-        console.error(err);
-        alert('送信に失敗しました。時間を置いて再試行してください。');
-      }
-    });
-  </script>
-</body>
-</html>
+    // レスポンスは読めないので “送れた前提” で完了メッセージ
+    alert('送信完了しました！');
+    e.target.reset();
+  }catch(err){
+    console.error(err);
+    alert('通信に失敗しました。時間をおいて再試行してください。');
+  }
+});
+</script>

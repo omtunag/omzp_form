@@ -2,12 +2,12 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>OMZP投稿フォーム</title>
   <style>
-    body{font-family:sans-serif;margin:2rem;max-width:480px}
+    body{font-family:sans-serif;margin:1.5rem;max-width:480px}
     label{display:block;margin-top:1rem}
-    button{margin-top:1.5rem;padding:.5rem 1rem}
+    button{margin-top:1.5rem;padding:.6rem 1.2rem}
   </style>
 </head>
 <body>
@@ -16,32 +16,48 @@
   <form id="omzp-form">
     <label>商品名：<br><input name="product" required></label>
     <label>コメント：<br><textarea name="comment" rows="4"></textarea></label>
-    <label>緯度：<br><input name="lat"  type="number" step="any"></label>
-    <label>経度：<br><input name="lng"  type="number" step="any"></label>
+
+    <!-- 位置情報（自動セットなので hidden） -->
+    <input type="hidden" name="lat">
+    <input type="hidden" name="lng">
+
     <button type="submit">送信</button>
   </form>
 
   <script>
-    // ===== 送信先（Apps Script）URL =====
-    const endpoint = 'https://script.google.com/macros/s/AKfycbx8NJ0JHRjsHy_NTXo4vUEzEY7qecqElKg7yZ8I9SuPSb5tXaIcKmZqEZiz8VzsnyXE/exec';
+    // ===== Apps Script の URL を貼り付け =====
+    const endpoint = 'https://script.google.com/macros/s/AKfycbykZCxIo9z8u2lE4Tfd7DiD1mFkXrUYRKlpiyjBhdefZ3Z4XlDBBx8ex-A2zna4m6nJ/exec';
 
-    document.getElementById('omzp-form').addEventListener('submit', async evt => {
-      evt.preventDefault();                     // ページ遷移させない
-      const formData = new FormData(evt.target);// フォーム内容をまとめる
+    // ---------- 位置情報を取得して hidden 欄へ ----------
+    window.addEventListener('load', () => {
+      if (!navigator.geolocation) return; // 対応していないブラウザ
+      navigator.geolocation.getCurrentPosition(pos => {
+        document.querySelector('input[name="lat"]').value = pos.coords.latitude;
+        document.querySelector('input[name="lng"]').value = pos.coords.longitude;
+      }, err => {
+        console.warn('位置情報取得失敗:', err.message);
+      }, { enableHighAccuracy: true, timeout: 10000 });
+    });
+
+    // ---------- フォーム送信 ----------
+    document.getElementById('omzp-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
 
       try {
-        const res  = await fetch(endpoint, { method: 'POST', body: formData });
-        const json = await res.json();          // Apps Script からの JSON を読む
+        const res  = await fetch(endpoint, { method: 'POST', body: fd });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
 
         if (json.result === 'ok') {
           alert('送信に成功しました！');
-          evt.target.reset();                   // フォームを空にする
+          e.target.reset();
         } else {
           throw new Error('サーバーからエラー応答');
         }
-      } catch(err) {
+      } catch (err) {
         console.error(err);
-        alert('送信に失敗しました。時間をおいて再試行してください。');
+        alert('送信に失敗しました。時間を置いて再試行してください。');
       }
     });
   </script>
